@@ -1,64 +1,108 @@
-const canvas = document.getElementById('heartCanvas');
-const ctx = canvas.getContext('2d');
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
-let heartPoints = [];
-let t = 0;
+let heartParticles = [];
+let fallingHearts = [];
 
-// Gera os pontos do coração (equação matemática)
+// Criar partículas para formar um coração gigante
 function generateHeartPoints() {
-  heartPoints = [];
-  for (let i = 0; i < Math.PI * 2; i += 0.05) {
-    const x = 16 * Math.pow(Math.sin(i), 3);
-    const y = -(13 * Math.cos(i) - 5 * Math.cos(2 * i) - 2 * Math.cos(3 * i) - Math.cos(4 * i));
-    heartPoints.push({ x, y });
-  }
+    const points = [];
+    const scale = 15; // Tamanho do coração
+    for (let t = 0; t < Math.PI * 2; t += 0.05) {
+        let x = scale * 16 * Math.pow(Math.sin(t), 3);
+        let y = -scale * (13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
+        points.push({
+            x: canvas.width / 2 + x,
+            y: canvas.height / 2 + y
+        });
+    }
+    return points;
 }
-generateHeartPoints();
 
-// Desenha o coração pouco a pouco (linha a linha)
-function drawHeartStep() {
-  if (t < heartPoints.length - 1) {
-    const scale = 15;
-    const offsetX = canvas.width / 2;
-    const offsetY = canvas.height / 2;
+// Criar partículas do coração central
+function createHeartParticles() {
+    const points = generateHeartPoints();
+    for (let p of points) {
+        for (let i = 0; i < 6; i++) { // Densidade dos pontinhos
+            heartParticles.push({
+                x: p.x + Math.random() * 2,
+                y: p.y + Math.random() * 2,
+                size: 2,
+                color: "red"
+            });
+        }
+    }
+}
+
+// Criar corações caindo
+function spawnFallingHeart() {
+    fallingHearts.push({
+        x: Math.random() * canvas.width,
+        y: -20,
+        size: 10 + Math.random() * 10,
+        speed: 1 + Math.random() * 2
+    });
+}
+
+function drawFallingHeart(h) {
+    ctx.save();
+    ctx.translate(h.x, h.y);
+    ctx.scale(h.size / 15, h.size / 15);
     ctx.beginPath();
-    ctx.moveTo(heartPoints[t].x * scale + offsetX, heartPoints[t].y * scale + offsetY);
-    ctx.lineTo(heartPoints[t + 1].x * scale + offsetX, heartPoints[t + 1].y * scale + offsetY);
-    ctx.strokeStyle = "white";
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    t++;
-    requestAnimationFrame(drawHeartStep);
-  }
-}
-drawHeartStep();
-
-// Cria um coraçãozinho flutuante
-function spawnMiniHeart(x, y) {
-  const heart = document.createElement("div");
-  heart.className = "mini-heart";
-  heart.style.left = x + "px";
-  heart.style.top = y + "px";
-  heart.textContent = "❤️EU TE AMOO EMANUELA";
-  document.body.appendChild(heart);
-  setTimeout(() => heart.remove(), 2000);
+    ctx.fillStyle = "red";
+    for (let t = 0; t < Math.PI * 2; t += 0.05) {
+        let x = 16 * Math.pow(Math.sin(t), 3);
+        let y = -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t));
+        ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
 }
 
-// Ao clicar na tela, cria vários coraçõezinhos
-document.addEventListener("click", (e) => {
-  for (let i = 0; i < 10; i++) {
-    const offsetX = (Math.random() - 0.5) * 100;
-    const offsetY = (Math.random() - 0.5) * 50;
+// Animação
+function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Desenha o coração central
+    for (let p of heartParticles) {
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x, p.y, p.size, p.size);
+    }
+
+    // Atualiza e desenha corações caindo
+    fallingHearts.forEach((h, index) => {
+        h.y += h.speed;
+        drawFallingHeart(h);
+        if (h.y > canvas.height) {
+            fallingHearts.splice(index, 1);
+        }
+    });
+
+    requestAnimationFrame(animate);
+}
+
+// Mostrar mensagem ao clicar
+document.addEventListener("click", () => {
+    const msg = document.getElementById("mensagem");
+    msg.style.opacity = 15;
     setTimeout(() => {
-      spawnMiniHeart(e.clientX + offsetX, e.clientY + offsetY);
-    }, i * 100);
-  }
+        msg.style.opacity = 15;
+    }, 3000);
 });
 
-// Redimensiona o canvas quando a janela mudar de tamanho
+// Ajustar tamanho ao redimensionar
 window.addEventListener("resize", () => {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    heartParticles = [];
+    createHeartParticles();
 });
+
+// Criar efeitos
+createHeartParticles();
+setInterval(spawnFallingHeart, 100);
+animate();
